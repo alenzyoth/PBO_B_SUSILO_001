@@ -1,8 +1,9 @@
-class admin {
-        private final String username = "Admin005";
-        private final String password = "password005";
+// Kelas Admin
+class Admin {
+    private final String username = "Admin001";
+    private final String password = "password001";
 
-        public boolean login(String inputUsername, String inputPassword) {
-            return inputUsername.equals(username) && inputPassword.equals(password);
-        }
+    public boolean login(String inputUsername, String inputPassword) {
+        return inputUsername.equals(username) && inputPassword.equals(password);
+    }
 }
