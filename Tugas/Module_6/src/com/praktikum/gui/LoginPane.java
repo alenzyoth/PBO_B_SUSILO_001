@@ -1,53 +1,70 @@
 package com.praktikum.gui;
 
-import com.praktikum.main.LoginSystem;
-import com.praktikum.users.Admin;
-import com.praktikum.users.Mahasiswa;
-import com.praktikum.users.User;
+import com.praktikum.Data.DataStore;
+import com.praktikum.users.*;
+
 import javafx.geometry.Insets;
-import javafx.geometry.Pos;
+import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
 public class LoginPane extends VBox {
-    public LoginPane(Stage stage) {
-        setSpacing(10);
-        setPadding(new Insets(20));
-        setAlignment(Pos.CENTER);
+    private Stage stage;
 
-        Label title = new Label("Login Sistem Lost & Found");
+    public LoginPane(Stage stage) {
+        this.stage = stage;
+        showLoginScene();
+    }
+
+    public void showLoginScene() {
+        Label titleLabel = new Label("Login Sistem Lost & Found");
 
         ComboBox<String> roleBox = new ComboBox<>();
-        roleBox.getItems().addAll("Mahasiswa", "Admin");
+        roleBox.getItems().addAll("Admin", "Mahasiswa");
         roleBox.setValue("Mahasiswa");
 
-        TextField namaField = new TextField();
-        namaField.setPromptText("Nama");
+        TextField usernameField = new TextField();
+        usernameField.setPromptText("Nama / Username");
 
-        PasswordField pwField = new PasswordField();
-        pwField.setPromptText("Password / NIM");
+        PasswordField passwordField = new PasswordField();
+        passwordField.setPromptText("NIM / Password");
 
-        Label statusLabel = new Label();
+        Button loginButton = new Button("Login");
+        Label messageLabel = new Label();
 
-        Button loginBtn = new Button("Login");
-        loginBtn.setOnAction(e -> {
+        loginButton.setOnAction(e -> {
             String role = roleBox.getValue();
-            String nama = namaField.getText();
-            String pass = pwField.getText();
+            String user = usernameField.getText();
+            String pass = passwordField.getText();
 
-            User user = LoginSystem.login(role, nama, pass);
-            if (user != null) {
-                if (user instanceof Admin) {
-                    new AdminDashboard(stage, (Admin) user);
-                } else if (user instanceof Mahasiswa) {
-                    new MahasiswaDashboard(stage, (Mahasiswa) user);
+            boolean success = false;
+            for (User u : DataStore.getUserList()) {
+                if ((role.equals("Admin") && u instanceof Admin) || (role.equals("Mahasiswa") && u instanceof Mahasiswa)) {
+                    if (u.login(user, pass)) {
+                        u.displayInfo();
+                        if (u instanceof Admin) {
+                            new AdminDashboard(stage).show();
+                        } else {
+                            new MahasiswaDashboard(stage, (Mahasiswa) u).show();
+                        }
+                        success = true;
+                        break;
+                    }
                 }
-            } else {
-                statusLabel.setText("Login gagal, periksa kredensial.");
+            }
+            if (!success) {
+                messageLabel.setText("Login gagal, periksa kredensial.");
             }
         });
 
-        getChildren().addAll(title, roleBox, namaField, pwField, loginBtn, statusLabel);
+        VBox layout = new VBox(10);
+        layout.setPadding(new Insets(20));
+        layout.getChildren().addAll(titleLabel, roleBox, usernameField, passwordField, loginButton, messageLabel);
+
+        Scene scene = new Scene(layout, 300, 250);
+        stage.setScene(scene);
+        stage.setTitle("Lost & Found Kampus");
+        stage.show();
     }
 }

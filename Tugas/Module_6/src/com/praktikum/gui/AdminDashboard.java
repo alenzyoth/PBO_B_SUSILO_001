@@ -1,11 +1,12 @@
 package com.praktikum.gui;
 
-import com.praktikum.data.DataStore;
-import com.praktikum.data.Item;
-import com.praktikum.users.Admin;
+import com.praktikum.Data.DataStore;
+import com.praktikum.Data.Item;
 import com.praktikum.users.Mahasiswa;
-import javafx.beans.property.SimpleStringProperty;
+import com.praktikum.users.User;
+import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
@@ -13,46 +14,106 @@ import javafx.scene.layout.*;
 import javafx.stage.Stage;
 
 public class AdminDashboard {
-    public AdminDashboard(Stage stage, Admin admin) {
-        Label greeting = new Label("Halo, Administrator " + admin.getNama());
+    private Stage stage;
 
-        TableView<Item> laporanTable = new TableView<>(FXCollections.observableArrayList(DataStore.itemList));
+    public AdminDashboard(Stage stage) {
+        this.stage = stage;
+    }
+
+    public void show() {
+        stage.setTitle("Hilang & Temukan Barang di Kampus");
+
+        Label greeting = new Label("Halo, Administrator");
+
+        TableView<Item> barangTable = new TableView<>(FXCollections.observableArrayList(DataStore.reportedItems));
         TableColumn<Item, String> namaCol = new TableColumn<>("Nama");
+        namaCol.setCellValueFactory(cell -> cell.getValue().itemNameProperty());
+
         TableColumn<Item, String> lokasiCol = new TableColumn<>("Lokasi");
+        lokasiCol.setCellValueFactory(cell -> cell.getValue().locationProperty());
+
         TableColumn<Item, String> statusCol = new TableColumn<>("Status");
+        statusCol.setCellValueFactory(cell -> cell.getValue().statusProperty());
 
-        namaCol.setCellValueFactory(d -> new SimpleStringProperty(d.getValue().getNama()));
-        lokasiCol.setCellValueFactory(d -> new SimpleStringProperty(d.getValue().getLokasi()));
-        statusCol.setCellValueFactory(d -> new SimpleStringProperty(d.getValue().getStatus()));
+        barangTable.getColumns().addAll(namaCol, lokasiCol, statusCol);
+        barangTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
 
-        laporanTable.getColumns().addAll(namaCol, lokasiCol, statusCol);
+
+        ObservableList<Mahasiswa> mahasiswaList = FXCollections.observableArrayList();
+        for (User user : DataStore.userList) {
+            if (user instanceof Mahasiswa mhs) {
+                mahasiswaList.add(mhs);
+            }
+        }
+
+        TableView<Mahasiswa> mahasiswaTable = new TableView<>(mahasiswaList);
+        TableColumn<Mahasiswa, String> namaMhsCol = new TableColumn<>("Nama");
+        namaMhsCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().getName()));
+
+        TableColumn<Mahasiswa, String> nimCol = new TableColumn<>("NIM");
+        nimCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().getId()));
+
+        mahasiswaTable.getColumns().addAll(namaMhsCol, nimCol);
+        mahasiswaTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+
+        TextField namaField = new TextField();
+        namaField.setPromptText("Nama Mahasiswa");
+
+        TextField nimField = new TextField();
+        nimField.setPromptText("NIM");
+
+        Button tambahBtn = new Button("Tambah");
+        tambahBtn.setOnAction(e -> {
+            String name = namaField.getText().trim();
+            String nim = nimField.getText().trim();
+
+            if (name.isEmpty() || nim.isEmpty()) {
+                showAlert("Nama dan NIM tidak boleh kosong.");
+                return;
+            }
+
+            Mahasiswa mhs = new Mahasiswa(name, nim); // username = nim, password = nim
+            DataStore.userList.add(mhs);
+            mahasiswaList.add(mhs);
+
+            namaField.clear();
+            nimField.clear();
+        });
+
+        HBox formMhs = new HBox(5, namaField, nimField, tambahBtn);
 
         Button tandaiBtn = new Button("Tandai Claimed");
         tandaiBtn.setOnAction(e -> {
-            Item selected = laporanTable.getSelectionModel().getSelectedItem();
-            if (selected != null) {
+            Item selected = barangTable.getSelectionModel().getSelectedItem();
+            if (selected != null && !selected.getStatus().equals("Claimed")) {
                 selected.setStatus("Claimed");
-                laporanTable.refresh();
+                barangTable.refresh();
             }
         });
 
-        TableView<Mahasiswa> mhsTable = new TableView<>(FXCollections.observableArrayList(DataStore.mahasiswaList));
-        TableColumn<Mahasiswa, String> namaMhsCol = new TableColumn<>("Nama");
-        TableColumn<Mahasiswa, String> nimCol = new TableColumn<>("NIM");
-        namaMhsCol.setCellValueFactory(m -> new SimpleStringProperty(m.getValue().getNama()));
-        nimCol.setCellValueFactory(m -> new SimpleStringProperty(m.getValue().getNim()));
-        mhsTable.getColumns().addAll(namaMhsCol, nimCol);
-
-        Button logoutBtn = new Button("Logout");
-        logoutBtn.setOnAction(e -> {
-            stage.setScene(new Scene(new LoginPane(stage), 400, 250));
+        Button logout = new Button("Logout");
+        logout.setOnAction(e -> {
+            LoginPane loginPane = new LoginPane(stage);
+            loginPane.showLoginScene();
         });
 
-        HBox mainBox = new HBox(10, laporanTable, mhsTable);
-        VBox vbox = new VBox(10, greeting, mainBox, tandaiBtn, logoutBtn);
-        vbox.setPadding(new Insets(10));
+        // Layout
+        VBox leftPane = new VBox(10, new Label("Laporan Barang"), barangTable, tandaiBtn);
+        VBox rightPane = new VBox(10, new Label("Data Mahasiswa"), mahasiswaTable, formMhs);
 
-        stage.setScene(new Scene(vbox, 700, 400));
-        stage.setTitle("Lost & Found Kampus");
+        HBox mainPane = new HBox(20, leftPane, rightPane);
+        VBox root = new VBox(10, greeting, mainPane, logout);
+        root.setPadding(new Insets(15));
+
+        stage.setScene(new Scene(root, 800, 500));
+        stage.show();
+    }
+
+    private void showAlert(String msg) {
+        Alert alert = new Alert(Alert.AlertType.WARNING);
+        alert.setTitle("Peringatan");
+        alert.setHeaderText(null);
+        alert.setContentText(msg);
+        alert.showAndWait();
     }
 }

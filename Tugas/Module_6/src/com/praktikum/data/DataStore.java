@@ -1,20 +1,25 @@
-package com.praktikum.data;
+package com.praktikum.  Data;
 
-import com.praktikum.data.Item;
-import com.praktikum.users.Mahasiswa;
-import com.praktikum.users.Admin;
+import com.praktikum.users.*;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class DataStore {
-    public static List<Item> itemList = new ArrayList<>();
-    public static List<Mahasiswa> mahasiswaList = new ArrayList<>();
-    public static List<Admin> adminList = new ArrayList<>();
+    public static List<User> userList = new ArrayList<>();
+    public static List<Item> reportedItems = new ArrayList<>();
 
-    static {
-        // Data dummy
-        mahasiswaList.add(new Mahasiswa("Adi", "001"));
-        adminList.add(new Admin("Admin", "admin123"));
+    public static void initializeDefaultUsers() {
+        userList.clear();
+        reportedItems.clear();
+
+        userList.add(new Admin("admin", "admin048", "admin", "admin048"));
+        userList.add(new Mahasiswa("Rafi", "202410370110048"));
+
+    }
+
+    public static List<User> getUserList() {
+
+        return userList;
     }
 }

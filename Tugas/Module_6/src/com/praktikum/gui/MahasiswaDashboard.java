@@ -1,63 +1,100 @@
 package com.praktikum.gui;
 
-import com.praktikum.data.DataStore;
-import com.praktikum.data.Item;
+import com.praktikum.Data.DataStore;
+import com.praktikum.Data.Item;
 import com.praktikum.users.Mahasiswa;
+import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
-import javafx.scene.layout.*;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
 public class MahasiswaDashboard {
-    public MahasiswaDashboard(Stage stage, Mahasiswa mhs) {
-        Label welcome = new Label("Selamat datang, " + mhs.getNama());
-        TextField namaBarang = new TextField();
-        namaBarang.setPromptText("Nama Barang");
 
-        TextField lokasi = new TextField();
-        lokasi.setPromptText("Lokasi");
+    private final Stage stage;
+    private final Mahasiswa mahasiswa;
+    private final ObservableList<Item> mahasiswaItems = FXCollections.observableArrayList();
 
-        Button laporBtn = new Button("Laporkan");
+    public MahasiswaDashboard(Stage stage, Mahasiswa mahasiswa) {
+        this.stage = stage;
+        this.mahasiswa = mahasiswa;
 
-        TableView<Item> table = new TableView<>();
-        TableColumn<Item, String> namaCol = new TableColumn<>("Nama");
-        namaCol.setCellValueFactory(data -> new javafx.beans.property.SimpleStringProperty(data.getValue().getNama()));
-
-        TableColumn<Item, String> lokasiCol = new TableColumn<>("Lokasi");
-        lokasiCol.setCellValueFactory(data -> new javafx.beans.property.SimpleStringProperty(data.getValue().getLokasi()));
-
-        TableColumn<Item, String> statusCol = new TableColumn<>("Status");
-        statusCol.setCellValueFactory(data -> new javafx.beans.property.SimpleStringProperty(data.getValue().getStatus()));
-
-        table.getColumns().addAll(namaCol, lokasiCol, statusCol);
-        table.setItems(FXCollections.observableArrayList(mhs.getLaporanSaya()));
-
-        laporBtn.setOnAction(e -> {
-            String nama = namaBarang.getText();
-            String loc = lokasi.getText();
-            if (!nama.isEmpty() && !loc.isEmpty()) {
-                Item item = new Item(nama, loc, mhs.getNama());
-                item.setStatus("Not Claimed"); // Set initial status
-                mhs.tambahLaporan(item);
-                DataStore.itemList.add(item);
-                table.getItems().add(item);
-                namaBarang.clear();
-                lokasi.clear();
+        for (Item item : DataStore.reportedItems) {
+            if (item.getPelapor().equals(mahasiswa.getName())) {
+                mahasiswaItems.add(item);
             }
+        }
+    }
+
+    public void show() {
+        stage.setTitle("Lost & Found Kampus - Mahasiswa");
+
+        Label welcome = new Label("Selamat datang, " + mahasiswa.getName());
+
+        TextField itemNameField = new TextField();
+        itemNameField.setPromptText("Nama Barang");
+
+        TextField descField = new TextField();
+        descField.setPromptText("Deskripsi");
+
+        TextField locField = new TextField();
+        locField.setPromptText("Lokasi");
+
+        Button reportButton = new Button("Laporkan");
+
+        TableView<Item> table = new TableView<>(mahasiswaItems);
+
+        TableColumn<Item, String> nameCol = new TableColumn<>("Nama");
+        nameCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().getItemName()));
+
+        TableColumn<Item, String> locCol = new TableColumn<>("Lokasi");
+        locCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().getLocation()));
+
+        table.getColumns().addAll(nameCol, locCol);
+        table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+
+        reportButton.setOnAction(e -> {
+            String itemName = itemNameField.getText().trim();
+            String desc = descField.getText().trim();
+            String loc = locField.getText().trim();
+
+            if (itemName.isEmpty() || loc.isEmpty()) {
+                showAlert("Nama dan lokasi barang wajib diisi.");
+                return;
+            }
+
+            Item item = new Item(itemName, desc, loc, mahasiswa.getName());
+            DataStore.reportedItems.add(item);
+            mahasiswaItems.add(item);
+
+            itemNameField.clear();
+            descField.clear();
+            locField.clear();
         });
 
-        Button logoutBtn = new Button("Logout");
-        logoutBtn.setOnAction(e -> {
+        Button logout = new Button("Logout");
+        logout.setOnAction(e -> {
             LoginPane loginPane = new LoginPane(stage);
-            stage.setScene(new Scene(loginPane, 400, 250));
+            loginPane.showLoginScene();
         });
 
-        VBox vbox = new VBox(10, welcome, namaBarang, lokasi, laporBtn, table, logoutBtn);
-        vbox.setPadding(new Insets(15));
+        HBox form = new HBox(5, itemNameField, descField, locField, reportButton);
+        VBox layout = new VBox(10, welcome, form, new Label("Daftar Barang yang Anda Laporkan"), table, logout);
+        layout.setPadding(new Insets(15));
 
-        stage.setScene(new Scene(vbox, 600, 400));
-        stage.setTitle("Lost & Found Kampus");
+        stage.setScene(new Scene(layout, 500, 400));
+        stage.show();
+    }
+
+    private void showAlert(String message) {
+        Alert alert = new Alert(Alert.AlertType.WARNING);
+        alert.setTitle("Peringatan");
+        alert.setHeaderText(null);
+        alert.setContentText(message);
+        alert.showAndWait();
     }
 }
